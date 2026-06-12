@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loop Control Flow Simulator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f8fafc; color: #334155; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); width: 100%; max-width: 950px; overflow: hidden; }
+        .header { background: #0f172a; color: white; padding: 16px 20px; }
+        .header h2 { font-size: 1.25rem; font-weight: 600; }
+        .header p { font-size: 0.875rem; color: #94a3b8; margin-top: 4px; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+        @media (min-width: 768px) { .grid { grid-template-columns: 1.1fr 0.9fr; } }
+        .panel-title { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; }
+        .visualizer { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #fdfdfd; display: flex; flex-direction: column; gap: 16px; min-height: 320px; }
+        .nodes-row { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 10px; position: relative; }
+        .node { flex: 1; margin: 0 6px; padding: 10px 4px; border-radius: 6px; border: 2px solid #cbd5e1; background: white; text-align: center; position: relative; transition: all 0.2s ease; }
+        .node.active { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3); transform: scale(1.05); }
+        .node.passed { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .node.skipped { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+        .node.broken { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+        .node.unreached { opacity: 0.5; background: #f8fafc; }
+        .node-meta { font-size: 0.65rem; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 4px; }
+        .node-val { font-size: 0.9rem; font-weight: 700; }
+        .pointer-arrow { position: absolute; top: -14px; left: 0; width: 100%; text-align: center; color: #2563eb; font-size: 1.2rem; display: none; transition: all 0.3s ease; pointer-events: none; }
+        .console-box { background: #0f172a; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.8rem; color: #38bdf8; min-height: 100px; max-height: 120px; overflow-y: auto; border: 1px solid #1e293b; }
+        .code-container { background: #1e293b; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 0.82rem; color: #e2e8f0; line-height: 1.45; }
+        .code-line { padding: 1px 8px; border-radius: 4px; border-left: 3px solid transparent; }
+        .code-line.active { background: #334155; border-left-color: #3b82f6; color: #fff; }
+        .code-line.active-break { background: #451a03; border-left-color: #f97316; color: #ffedd5; }
+        .code-line.active-continue { background: #1c1917; border-left-color: #eab308; color: #fef9c3; }
+        .indent-1 { padding-left: 24px; }
+        .indent-2 { padding-left: 44px; }
+        .controls { display: flex; gap: 10px; padding: 16px 20px 20px 20px; background: #fff; border-top: 1px solid #e2e8f0; }
+        button { flex: 1; padding: 10px 16px; border-radius: 6px; border: none; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary { background: #e2e8f0; color: #475569; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status-banner { padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; text-align: center; border: 1px solid #e2e8f0; background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2>Loop Control Flow Simulator</h2>
+        <p>Step through execution sequentially to watch how break completely escapes a loop, while continue shortcuts back to the top.</p>
+    </div>
+    
+    <div class="grid">
+        <div>
+            <div class="panel-title">Spatial Track Simulation</div>
+            <div class="visualizer">
+                <div class="nodes-row">
+                    <div class="node" id="node-0">
+                        <div class="node-meta">Node 1</div>
+                        <div class="node-val">12 °C</div>
+                    </div>
+                    <div class="node" id="node-1">
+                        <div class="node-meta">Node 2</div>
+                        <div class="node-val">None</div>
+                    </div>
+                    <div class="node" id="node-2">
+                        <div class="node-meta">Node 3</div>
+                        <div class="node-val">15 °C</div>
+                    </div>
+                    <div class="node" id="node-3">
+                        <div class="node-meta">Node 4</div>
+                        <div class="node-val">-999</div>
+                    </div>
+                    <div class="node" id="node-4">
+                        <div class="node-meta">Node 5</div>
+                        <div class="node-val">18 °C</div>
+                    </div>
+                </div>
+                
+                <div class="panel-title" style="margin-top: 10px; margin-bottom: 4px;">Console Output</div>
+                <div class="console-box" id="console-logs">&gt;_ Execution initialized. Click 'Next Step' to loop.</div>
+            </div>
+        </div>
+        
+        <div>
+            <div class="panel-title">Runtime Frame</div>
+            <div class="code-container">
+                <div class="code-line" id="line-1">for val in dataset:</div>
+                <div class="code-line indent-1" id="line-2">if val is None:</div>
+                <div class="code-line indent-2" id="line-3">continue</div>
+                <div class="code-line indent-1" id="line-4" style="margin-top: 4px;">if val == -999:</div>
+                <div class="code-line indent-2" id="line-5">break</div>
+                <div class="code-line indent-1" id="line-6" style="margin-top: 4px;">print(f"Valid tracking: {val}")</div>
+                <div class="code-line" id="line-7" style="margin-top: 8px;">print("Analysis cycle complete.")</div>
+            </div>
+            <div class="status-banner" id="status-banner" style="margin-top: 12px;">State: Idle</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn-secondary" onclick="resetSim()">Reset</button>
+        <button class="btn-primary" id="btn-next" onclick="nextStep()">Next Step →</button>
+    </div>
+</div>
+
+<script>
+    const dataset = [12, null, 15, -999, 18];
+    let idx = 0;
+    let currentLine = 1;
+    let step = 0;
+    let logs = [];
+
+    function addLog(msg, color="#38bdf8") {
+        logs.push(`<span style="color: ${color}">${msg}</span>`);
+        const box = document.getElementById('console-logs');
+        box.innerHTML = logs.join('<br>');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.code-line').forEach(l => {
+            l.className = l.className.replace(' active-break', '').replace(' active-continue', '').replace(' active', '');
+        });
+        document.querySelectorAll('.node').forEach((n, i) => {
+            if (i < idx) {
+                if (dataset[i] === null) n.className = "node skipped";
+                else if (dataset[i] === -999) n.className = "node broken";
+                else n.className = "node passed";
+            } else if (i === idx && idx < dataset.length && currentLine < 7) {
+                n.className = "node active";
+            } else {
+                n.className = "node unreached";
+            }
+        });
+
+        const lineEl = document.getElementById(`line-${currentLine}`);
+        if (lineEl) {
+            if (currentLine === 3) lineEl.classList.add('active-continue');
+            else if (currentLine === 5) lineEl.classList.add('active-break');
+            else lineEl.classList.add('active');
+        }
+
+        const banner = document.getElementById('status-banner');
+        if (currentLine === 7) {
+            banner.innerText = "State: Completed Out-of-Loop Logic";
+            banner.style.background = "#f0fdf4";
+            document.getElementById('btn-next').disabled = true;
+        } else if (idx >= dataset.length) {
+            banner.innerText = "State: End of Collection Reached";
+            document.getElementById('btn-next').disabled = true;
+        } else {
+            banner.innerText = `State: Index ${idx} | Current Value: ${dataset[idx] === null ? 'None' : dataset[idx]}`;
+            banner.style.background = "#f8fafc";
+        }
+    }
+
+    function nextStep() {
+        if (currentLine === 1) {
+            if (idx >= dataset.length) {
+                currentLine = 7;
+                updateUI();
+                return;
+            }
+            currentLine = 2;
+        } else if (currentLine === 2) {
+            if (dataset[idx] === null) {
+                currentLine = 3;
+            } else {
+                currentLine = 4;
+            }
+        } else if (currentLine === 3) {
+            addLog(`↳ [CONTINUE] Skipping remaining lines for index ${idx}`, "#eab308");
+            idx++;
+            currentLine = 1;
+        } else if (currentLine === 4) {
+            if (dataset[idx] === -999) {
+                currentLine = 5;
+            } else {
+                currentLine = 6;
+            }
+        } else if (currentLine === 5) {
+            addLog(`↳ [BREAK] Emergency exit triggered by corrupted flag -999! Escaping loop immediately.`, "#f43f5e");
+            idx++; 
+            currentLine = 7;
+        } else if (currentLine === 6) {
+            addLog(`Valid tracking: ${dataset[idx]} °C`, "#10b981");
+            idx++;
+            currentLine = 1;
+        } else if (currentLine === 7) {
+            addLog("Analysis cycle complete.", "#ffffff");
+        }
+        updateUI();
+    }
+
+    function resetSim() {
+        idx = 0;
+        currentLine = 1;
+        step = 0;
+        logs = ["&gt;_ Execution initialized. Click 'Next Step' to loop."];
+        document.getElementById('btn-next').disabled = false;
+        document.getElementById('console-logs').innerHTML = logs[0];
+        updateUI();
+    }
+
+    window.onload = updateUI;
+</script>
+</body>
+</html>
